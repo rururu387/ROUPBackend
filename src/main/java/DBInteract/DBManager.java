@@ -8,6 +8,7 @@ import javax.xml.transform.Result;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
@@ -153,7 +154,7 @@ public class DBManager
         return true;
     }
 
-    boolean registerUser(String login, String password) throws SQLException, NoSuchAlgorithmException, InvalidKeySpecException
+    public boolean registerUser(String login, String password) throws SQLException, NoSuchAlgorithmException, InvalidKeySpecException
     {
         byte[] securedPassword = Encryptor.getPBKDF2SecurePassword(login, password);
         if (isUserExists(login))
@@ -161,7 +162,7 @@ public class DBManager
             return false;
         }
 
-        String queryString = "INSERT INTO users VALUES (?, ?)";
+        String queryString = "INSERT INTO users (user_name, password) VALUES (?, ?)";
 
         try (PreparedStatement statement = connection.prepareStatement(queryString))
         {
@@ -173,7 +174,7 @@ public class DBManager
         return true;
     }
 
-    boolean isUserValid(String login, String password) throws SQLException, NoSuchAlgorithmException, InvalidKeySpecException
+    public boolean isUserValid(String login, String password) throws SQLException, NoSuchAlgorithmException, InvalidKeySpecException
     {
         byte[] securedPassword = Encryptor.getPBKDF2SecurePassword(login, password);
         ResultSet resultSet = null;
@@ -194,7 +195,7 @@ public class DBManager
         return true;
     }
 
-    RawDataAdapter.UserRole getUserRole(String login, int groupId) throws SQLException
+    public RawDataAdapter.UserRole getUserRole(String login, int groupId) throws SQLException
     {
         Integer userId = getUserIdByLogin(login);
         if (userId == null)
@@ -221,7 +222,7 @@ public class DBManager
         }
     }
 
-    boolean isUserInGroup(String login, int groupId) throws SQLException
+    public boolean isUserInGroup(String login, int groupId) throws SQLException
     {
         ResultSet resultSet = null;
         Integer userId = getUserIdByLogin(login);
@@ -239,7 +240,7 @@ public class DBManager
         }
     }
 
-    Integer getUserIdByLogin(String login) throws SQLException
+    public Integer getUserIdByLogin(String login) throws SQLException
     {
         ResultSet resultSet = null;
         String queryString = "SELECT user_id FROM users WHERE user_name = ?";
@@ -255,6 +256,33 @@ public class DBManager
             }
             return resultSet.getInt(1);
         }
+    }
+
+    public ArrayList<UserActivityInfo> getUserActivity(int userId, LocalDateTime startDate, LocalDateTime endDate) throws SQLException {
+        ArrayList<UserActivityInfo> rawHourlyData = new ArrayList<>();
+        ResultSet resultSet = null;
+        String queryString = "SELECT program.program_name, creation_date, cpu_usage, ram_usage, thread_amount, time_act_sum, time_sum, data_pack_count FROM hourinfo JOIN program ON hourinfo.program_id = program.program_id JOIN users ON program.user_id = users.user_id WHERE users.user_id = ? AND creation_date > ? AND creation_date < ? ORDER BY creation_date ASC";
+        try (PreparedStatement statement = connection.prepareStatement(queryString))
+        {
+            statement.setInt(1, userId);
+            statement.setTimestamp(2, Timestamp.valueOf(startDate));
+            statement.setTimestamp(3, Timestamp.valueOf(endDate));
+            resultSet = statement.executeQuery();
+            while (resultSet.next())
+            {
+                rawHourlyData.add(new UserActivityInfo(
+                    resultSet.getString(1), //name
+                    resultSet.getTimestamp(2).toLocalDateTime(), //creation date
+                    resultSet.getDouble(3), //cpu usage
+                    resultSet.getLong(4), //ram usage
+                    resultSet.getInt(5), //thread amount
+                    resultSet.getInt(6), //time act sum
+                    resultSet.getInt(7), //time sum
+                    resultSet.getInt(8) //data pack count
+                ));
+            }
+        }
+        return rawHourlyData;
     }
 
       /*groupID: int

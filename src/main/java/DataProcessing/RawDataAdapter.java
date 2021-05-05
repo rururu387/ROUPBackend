@@ -3,9 +3,12 @@ package DataProcessing;
 import DBInteract.DBManager;
 import DBInteract.FrontPageInfoClass;
 import DBInteract.UserData;
+import DBInteract.UserActivityInfo;
 import exceptions.PrimaryKeyNotUniqueException;
 
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -36,6 +39,11 @@ public class RawDataAdapter
         try
         {
             var arrayList = manager.getGroupHeaderById(groupId);
+            if (arrayList == null)
+            {
+                return null;
+            }
+
             groupName = arrayList[0];
             groupDescription = arrayList[1];
         }
@@ -136,5 +144,41 @@ public class RawDataAdapter
                 return null;
             }
         }
+    }
+
+    public ArrayList<UserActivityInfo> getUserTableInfo(String userName, int timeUnit, LocalDateTime startDate, LocalDateTime endDate)
+    {
+        try
+        {
+            return getUserTableInfo(manager.getUserIdByLogin(userName), timeUnit, startDate, endDate);
+        } catch (SQLException e)
+        {
+            System.out.println(e);
+            return null;
+        }
+    }
+
+    public ArrayList<UserActivityInfo> getUserTableInfo(int userId, int timeUnit, LocalDateTime startDate, LocalDateTime endDate)
+    {
+        ArrayList<UserActivityInfo> activityInfo = null;
+        try
+        {
+            activityInfo = manager.getUserActivity(userId, startDate, endDate);
+        }
+        catch (SQLException e)
+        {
+            System.out.println(e);
+        }
+
+        //Sum up packages here (to change time scale in our table)
+        timeUnit = 1;
+        switch(timeUnit)
+        {
+            case 1:
+            {
+
+            }
+        }
+        return activityInfo;
     }
 }
