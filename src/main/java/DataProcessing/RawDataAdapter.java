@@ -6,11 +6,12 @@ import DBInteract.UserData;
 import DBInteract.UserActivityInfo;
 import exceptions.PrimaryKeyNotUniqueException;
 
+import java.math.BigInteger;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class RawDataAdapter
 {
@@ -158,27 +159,123 @@ public class RawDataAdapter
         }
     }
 
-    public ArrayList<UserActivityInfo> getUserTableInfo(int userId, int timeUnit, LocalDateTime startDate, LocalDateTime endDate)
+    public ArrayList<UserActivityInfo> getUserTableInfo(int userId, int timeScale, LocalDateTime startDate, LocalDateTime endDate)
     {
-        ArrayList<UserActivityInfo> activityInfo = null;
-        try
-        {
-            activityInfo = manager.getUserActivity(userId, startDate, endDate);
-        }
-        catch (SQLException e)
-        {
-            System.out.println(e);
-        }
+        ArrayList<UserActivityInfo> dividedActivityInfo = new ArrayList<>();
 
-        //Sum up packages here (to change time scale in our table)
-        timeUnit = 1;
-        switch(timeUnit)
+        LocalDateTime scaledTimeStart = startDate;
+        LocalDateTime scaledTimeEnd = startDate.plusHours(timeScale);
+        ArrayList<UserActivityInfo> activityInfoInTimeScale = null;
+
+        while (endDate.isAfter(scaledTimeEnd) || endDate.isEqual(scaledTimeEnd))
         {
-            case 1:
+            try
             {
-
+                activityInfoInTimeScale = manager.getUserActivity(userId, scaledTimeStart, scaledTimeEnd);
             }
+            catch(SQLException e)
+            {
+                System.out.println(e);
+            }
+
+            if (activityInfoInTimeScale.size() == 0)
+            {
+                scaledTimeStart = scaledTimeEnd;
+                scaledTimeEnd = scaledTimeEnd.plusHours(timeScale);
+                continue;
+            }
+
+            String name = null;
+            double cpuUsage = 0;
+            BigInteger ramUsage = new BigInteger("0");
+            int threadAmount = 0;
+            int activeWindowTime = 0;
+            int windowTime = 0;
+            int packagesAmount = 0;
+            LocalDateTime creationTime = null;
+
+            ListIterator<UserActivityInfo> activityInfoListIterator = activityInfoInTimeScale.listIterator();
+
+            UserActivityInfo hourInfo;
+            int hoursProcessed = 0;
+            while (activityInfoListIterator.hasNext())
+            {
+                hourInfo = activityInfoListIterator.next();
+
+                if (name == null)
+                {
+                    name = hourInfo.getName();
+                    creationTime = hourInfo.getCreationDate();
+                }
+
+                if (name.equals("idea64.exe"))
+                {
+                    System.out.println("On chrome!");
+                }
+
+                if(!hourInfo.getName().equals(name))
+                {
+                    dividedActivityInfo.add(new UserActivityInfo(
+                            name,
+                            creationTime,
+                            (cpuUsage / hoursProcessed),
+                            ramUsage.divide(BigInteger.valueOf(hoursProcessed)).longValue(),
+                            (threadAmount / hoursProcessed),
+                            activeWindowTime,
+                            windowTime,
+                            packagesAmount
+                    ));
+
+                    if (!hourInfo.getName().equals(name))
+                    {
+                        name = hourInfo.getName();
+                        cpuUsage = 0;
+                        ramUsage = new BigInteger("0");
+                        threadAmount = 0;
+                        activeWindowTime = 0;
+                        windowTime = 0;
+                        packagesAmount = 0;
+                        creationTime = hourInfo.getCreationDate();
+                        hoursProcessed = 0;
+                    }
+                }
+
+                cpuUsage += hourInfo.getCpuUsage();
+                ramUsage = ramUsage.add(BigInteger.valueOf(hourInfo.getRamUsage()));
+                threadAmount += hourInfo.getThreadAmount();
+                activeWindowTime += hourInfo.getActiveWindowTime();
+                windowTime += hourInfo.getWindowTime();
+                packagesAmount += hourInfo.getPackagesAmount();
+                hoursProcessed++;
+            }
+
+            dividedActivityInfo.add(new UserActivityInfo(
+                    name,
+                    creationTime,
+                    cpuUsage / hoursProcessed,
+                    ramUsage.divide(BigInteger.valueOf(hoursProcessed)).longValue(),
+                    threadAmount / hoursProcessed,
+                    activeWindowTime,
+                    windowTime,
+                    packagesAmount
+            ));
+
+            scaledTimeStart = scaledTimeEnd;
+            scaledTimeEnd = scaledTimeEnd.plusHours(timeScale);
+            /*if (hoursProcessed != 0)
+            {
+                dividedActivityInfo.add(new UserActivityInfo(
+                        name,
+                        creationTime,
+                        cpuUsage / hoursProcessed,
+                        ramUsage.divide(BigInteger.valueOf(hoursProcessed)).longValue(),
+                        threadAmount / hoursProcessed,
+                        activeWindowTime,
+                        windowTime,
+                        packagesAmount
+                ));
+            }*/
         }
-        return activityInfo;
+        return dividedActivityInfo;
     }
 }

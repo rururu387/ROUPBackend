@@ -5,6 +5,7 @@ import DataProcessing.RawDataAdapter;
 import com.google.gson.*;
 
 import javax.imageio.plugins.tiff.TIFFDirectory;
+import java.lang.reflect.Type;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.sql.SQLException;
@@ -47,7 +48,16 @@ public class Main
             System.out.println(e);
         }
 
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        GsonBuilder gsonBuilder = new GsonBuilder().setPrettyPrinting();
+        gsonBuilder.registerTypeAdapter(LocalDateTime.class, new JsonSerializer<LocalDateTime>() {
+            @Override
+            public JsonElement serialize(LocalDateTime localDateTime, Type type, JsonSerializationContext jsonDeserializationContext) throws JsonParseException {
+                DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss, dd.MM.yyyy");
+                return new JsonPrimitive(dateTimeFormatter.format(localDateTime)); //LocalDateTime.parse(json.getAsString(), dateTimeFormatter);
+            }
+        });
+        Gson gson = gsonBuilder.create();
+
         if (frontPageInfo != null)
         {
             String frontPageJson = gson.toJson(frontPageInfo);
@@ -58,7 +68,7 @@ public class Main
         {
             boolean registerStatus = manager.registerUser("New Goose", "123");
             System.out.println("Register processed with no errors!");
-            if (registerStatus == false)
+            if (!registerStatus)
             {
                 System.out.println("User with such login already exists");
             }
@@ -89,13 +99,13 @@ public class Main
         LocalDateTime beginObservation, endObservation;
 
         String pattern = "yyyy-MM-dd HH:mm:ss";
-        String beginTimeString = "2021-03-15 00:00:00";
-        String endTimeString = "2021-03-17 00:00:00";
+        String beginTimeString = "2021-03-16 22:00:00";
+        String endTimeString = "2021-05-17 22:00:00";
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
         beginObservation = LocalDateTime.from(formatter.parse(beginTimeString));
         endObservation = LocalDateTime.from(formatter.parse(endTimeString));
 
-        ArrayList<UserActivityInfo> userActivityInfo = RDAdapter.getUserTableInfo("Goose", 1, beginObservation, endObservation);
+        ArrayList<UserActivityInfo> userActivityInfo = RDAdapter.getUserTableInfo("Goose", 1200, beginObservation, endObservation);
         //TODO - print here correctly
         String str = gson.toJson(userActivityInfo);
         System.out.println(str);

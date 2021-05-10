@@ -1,5 +1,8 @@
 package DBInteract;
 
+import com.google.gson.annotations.Expose;
+
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 public class UserActivityInfo
