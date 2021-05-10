@@ -258,15 +258,18 @@ public class DBManager
         }
     }
 
-    public ArrayList<UserActivityInfo> getUserActivity(int userId, LocalDateTime startDate, LocalDateTime endDate) throws SQLException {
+    public ArrayList<UserActivityInfo> getUserActivity(int userId, int timeScale, LocalDateTime startDate, LocalDateTime endDate) throws SQLException {
         ArrayList<UserActivityInfo> rawHourlyData = new ArrayList<>();
         ResultSet resultSet = null;
-        String queryString = "SELECT program.program_name, creation_date, cpu_usage, ram_usage, thread_amount, time_act_sum, time_sum, data_pack_count FROM hourinfo JOIN program ON hourinfo.program_id = program.program_id JOIN users ON program.user_id = users.user_id WHERE users.user_id = ? AND creation_date >= ? AND creation_date < ? ORDER BY program.program_name ASC, creation_date ASC";
+        //String queryString = "SELECT program.program_name, creation_date, cpu_usage, ram_usage, thread_amount, time_act_sum, time_sum, data_pack_count FROM hourinfo JOIN program ON hourinfo.program_id = program.program_id JOIN users ON program.user_id = users.user_id WHERE users.user_id = ? AND creation_date >= ? AND creation_date < ? ORDER BY program.program_name ASC, creation_date ASC";
+        String queryString = "SELECT program.program_name, creation_date, cpu_usage, ram_usage, thread_amount, time_act_sum, time_sum, data_pack_count FROM hourinfo JOIN program ON hourinfo.program_id = program.program_id JOIN users ON program.user_id = users.user_id WHERE users.user_id = ? AND creation_date >= ? AND creation_date < ? ORDER BY CAST(TIMESTAMPDIFF(HOUR, ?, creation_date) / ? AS UNSIGNED) ASC, program.program_name ASC, creation_date ASC";
         try (PreparedStatement statement = connection.prepareStatement(queryString))
         {
             statement.setInt(1, userId);
             statement.setTimestamp(2, Timestamp.valueOf(startDate));
             statement.setTimestamp(3, Timestamp.valueOf(endDate));
+            statement.setTimestamp(4, Timestamp.valueOf(startDate));
+            statement.setInt(5, timeScale);
             resultSet = statement.executeQuery();
             while (resultSet.next())
             {

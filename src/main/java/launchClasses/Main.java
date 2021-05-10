@@ -4,12 +4,12 @@ import DBInteract.*;
 import DataProcessing.RawDataAdapter;
 import com.google.gson.*;
 
-import javax.imageio.plugins.tiff.TIFFDirectory;
 import java.lang.reflect.Type;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -100,39 +100,20 @@ public class Main
 
         String pattern = "yyyy-MM-dd HH:mm:ss";
         String beginTimeString = "2021-03-16 22:00:00";
-        String endTimeString = "2021-05-17 22:00:00";
+        String endTimeString = "2021-04-18 22:00:00";
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
         beginObservation = LocalDateTime.from(formatter.parse(beginTimeString));
         endObservation = LocalDateTime.from(formatter.parse(endTimeString));
 
-        ArrayList<UserActivityInfo> userActivityInfo = RDAdapter.getUserTableInfo("Goose", 1200, beginObservation, endObservation);
+        Clock clock = Clock.systemDefaultZone();
+        Instant start = clock.instant();
+        ArrayList<UserActivityInfo> userActivityInfo = RDAdapter.getUserTableInfo("Goose", 4, beginObservation, endObservation);
+        Instant end = clock.instant();
+        System.out.println(start);
+        System.out.println(end);
+
         //TODO - print here correctly
         String str = gson.toJson(userActivityInfo);
         System.out.println(str);
-
-        /*String url = "jdbc:mysql://localhost/test?serverTimezone=Europe/Moscow&useSSL=false";
-        String login = "root";
-        String password = "root";*/
-
-        //DriverManager driverManager = null;
-        /*ResultSet resultSet;
-        try
-        {
-            Connection driverManager = DriverManager.getConnection(url, login, password);
-            String queryPattern = "SELECT * FROM users WHERE user_name = ?";
-            PreparedStatement statement = driverManager.prepareStatement(queryPattern);
-            statement.setString(1, "goose");
-
-            resultSet = statement.executeQuery();
-
-            while (resultSet.next())
-            {
-                System.out.println(resultSet.getInt(1) + resultSet.getString(2) + Arrays.toString(resultSet.getBytes(3)));
-            }
-        }
-        catch(SQLException e)
-        {
-            System.out.println(e);
-        }*/
     }
 }
